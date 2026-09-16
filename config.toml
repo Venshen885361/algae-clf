@@ -1,0 +1,45 @@
+# ===== 資料來源 =====
+[data]
+# mode = "csv"        -> 用 metadata CSV（UDE Diatoms in the Wild 2024）
+# mode = "imagefolder"-> root/<Genus_species>/*.png（LMFM-12、自己拍的資料）
+mode = "imagefolder"
+root = "data/raw"
+csv = "data/raw/metadata.csv"
+# ⚠️ UDE CSV 實際欄位名稱請下載後用 `head -1 metadata.csv` 確認再改
+col_path = "filename"
+col_genus = "genus"
+col_species = "species"
+col_group = ""            # 例如 slide / sample id；有填就做 group split，避免同一玻片洩漏到 test
+
+min_samples = 10          # 少於此數的類別直接排除（科展要在報告中說明）
+split = [0.7, 0.1, 0.2]   # train / val / test
+seed = 42
+out = "data/splits.csv"
+
+# ===== 影像前處理 =====
+[image]
+size = 224
+# resize: 直接縮放（丟失絕對尺寸）
+# canvas: 先 pad/crop 到固定像素畫布再縮放 → 保留相對大小（UDE 固定 0.09 µm/px）
+resize_mode = "canvas"
+canvas_px = 1024          # 1024 px * 0.09 µm = 92 µm 視野
+
+# ===== Backbone =====
+[model]
+# "bioclip:imageomics/bioclip-2" | "bioclip:imageomics/bioclip-2.5-vith14" | "timm:convnext_base.fb_in22k"
+backbone = "bioclip:imageomics/bioclip-2"
+pretrained = true
+
+# ===== 訓練 =====
+[train]
+run_dir = "runs/exp1"
+epochs = 15
+batch_size = 64
+lr_backbone = 1e-5
+lr_head = 1e-3
+weight_decay = 0.05
+label_smoothing = 0.1
+logit_adjust_tau = 1.0    # 0 = 一般 CE；1 = logit-adjusted loss（長尾校正）
+num_workers = 8
+bf16 = true
+compile = false
